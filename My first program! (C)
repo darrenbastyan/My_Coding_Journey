@@ -1,0 +1,79 @@
+Okay! besides the obvious: 
+________________________________________________________________________________
+# include <stdio.h>
+int main(void)
+{
+    printf("hello, world\n");
+}
+________________________________________________________________________________
+As a child of the 90s, I am actually rather pleased that my first program...of all things...is programming the half pyramid at the end of World 1-1 in Nintendo’s Super Mario Brothers!
+________________________________________________________________________________
+#include <**library for GetInt()**.h>
+#include <stdio.h>
+
+int main (void)
+    {
+        //request number of blocks (i.e. height)
+        printf("Height:");
+        int height = GetInt();
+        
+        //ensures value is in range
+        while ( height < 0 || height >=24)
+            {
+            printf("Height:");
+            height =GetInt();
+            }
+        //creates number of blocks as required (top layer being two blocks wide)
+        for ( int i = 1; i <= height; i++ )
+        {
+            for ( int j = 1; j <= height - i; j++ ) 
+            {
+                printf(" ");
+            }
+            for (int k = 1; k<=i+1; k++)
+            {
+                printf("#");
+            }
+            printf("\n");
+        }
+    }
+________________________________________________________________________________
+  Even at the time of writing (4 weeks ago!) it was very simple, but when I types "make mario" and it compiled, and then on typing "./mario" it produced exactly what I had planned - I knew right then that I am a programmer! There was no greater feeling of satisfaction than creatively devising a solution path to a problem and then bringing it to fruition.  
+  
+  Variables, functions, conditions, loops ... 
+  These are things that I am very familiar with from school / as a Mathematican and Maths teacher, making them feel particular familiar and freindly. I particularly love the elegance and power of loops.
+  
+  My second program was less remarkable - a simple program for calculating the amount of coins in change you would receive if a cashier gave you only 25, 10, 5 and 1 cent coins (minimising the number of coins). 
+________________________________________________________________________________
+#include <**library for GetInt()**.h>
+#include <stdio.h>
+#include <math.h>
+
+int main (void)
+    {
+        //Prompt for input in dollars
+        printf("O hai! How much change is owed?");
+        float change = GetFloat();
+        //Ensures  non-negativity
+        while ( change < 0)
+            {
+            printf("O hai! How much change is owed?");
+            change = GetFloat();
+            }
+            
+        //Convert to cents whilst also rounding
+        int cents = round( change * 100 );
+        
+        //Calculate the amount of coins needed
+        int number_coins = 0;
+        number_coins = (cents - cents%25)/25;
+        cents = cents%25;
+        number_coins = number_coins + (cents - cents%10)/10;
+        cents = cents%10;
+        number_coins = number_coins + (cents - cents%5)/5;
+        cents = cents%5;
+        number_coins = number_coins + cents;
+        printf("%i\n",number_coins);
+    }
+________________________________________________________________________________
+Really simple program that looking at it now I am sure I can tidy up this code! (I hate the look of lines 67 to 76). One thing I do love though, is seeing modulo arithmetic. I have spent years as a teacher trying to inspire students and show them the power of Maths in the real world... and here is me using modulo arithmetic in my second (non "hello world") program, answering a simple but very practical problem!
