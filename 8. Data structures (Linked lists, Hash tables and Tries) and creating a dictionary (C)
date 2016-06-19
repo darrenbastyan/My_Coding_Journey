@@ -1,0 +1,166 @@
+This was my first real chance to play with different data structures. The challenge was to load a dictionary into an efficient data structure, check all of the words in a text file to the dictionary, list the misspelt words and then unload the dictionary. I opted for creating a trie as I really liked the concept of trie. Whilst demanding on storage space, once loaded, a trie has a beautiful elegance that interested me. To be able to achieve constant time complexity, O(constant), in searching is a beautiful thing. It was also a helpful program for firmly getting to grips with pointers, which I now feel confident with, as well as memory allocation and managing the heap. I have come to appreciate that malloc (actually I used calloc) is a very important function. One small thing to note: for simplicity we were told that all words in the dictionary would be in lowercase and at most have an apostrophe. Additionally any word in the text file to be checked should not be case sensitive (i.e. “aNd” is to be taken as a correct spelling). 
+This project was also very good for developing my appreciation of a "makefile" (not included here) for more complicated programs, as well as "factoring" out functions. Included below is just the functions that the spell checker program calls.
+_________________________________________________________________________
+/**
+ * dictionary.c
+ *
+ *
+ * Implements a dictionary's functionality.
+ */
+
+#include <stdbool.h>
+#include <string.h>
+#include <stdlib.h>
+#include "dictionary.h"
+#include <ctype.h>
+#include <stdio.h>
+
+//defining a node
+typedef struct node
+{
+    bool is_word;
+    struct node* children[27];
+} node;
+
+//prototype of unload function to be used by unload() recursively
+void unload_node(node* node);
+
+//globally defined root node and pointer
+node* root = NULL;
+
+//globally defined counter for use by size() and in implementation of load()
+double count_words = 0;
+
+/**
+ * Returns true if word is in dictionary else false. NB must allows for capiltalisation
+ */
+bool check(const char* word)
+{
+    //sanity check for errors in input
+    if (word == NULL || root == NULL)
+        return false;
+    
+    //traverser node    
+    node* trav = root;
+    
+    //iterate over each letter in word
+    for (int i = 0, n=strlen(word); i<n; i++)
+    {
+        //convert letter to number in [0,26] where ' = 26
+        int index_ith = (tolower(word[i]) - 'a');
+        if (index_ith == -58)
+            index_ith = 26;
+        
+        //if pointer for ith letter is null then word is not in dictionary
+        if (trav->children[index_ith] == NULL)
+            return false;
+        
+        //move to next node
+        else
+            trav = trav->children[index_ith];
+    }
+    //if get to the final letter, then check bool
+    if (trav->is_word == true)
+        return true;
+        
+    else
+        return false;
+}
+
+/**
+ * Loads dictionary into memory.  Returns true if successful else false. 
+ */
+bool load(const char* dictionary)
+{
+    //open dictionary for reading
+    FILE* dictionary_ptr = fopen(dictionary,"r");
+    
+    if (dictionary_ptr ==NULL)
+        return false;
+        
+    //allocate memory to read in the latest word
+    char latest_word[LENGTH+1];
+    //allocate memory for counter for number of words on heap to be available to unload
+
+    //allocate memory for root node
+    root = calloc(sizeof(node),1);
+    
+    //traverser pointer
+    node* trav = root;      
+    
+    //next node
+    node* next = NULL;
+    
+    //iterate over every word in the dictionary
+    while (fscanf(dictionary_ptr, "%s", latest_word) == 1)
+    {
+        //count number of words loaded
+        count_words ++;    
+        //set traverser pointer to the root node
+        trav = root;
+        
+        //iterate over each letter in latest_word
+        for (int i=0, n=strlen(latest_word); i<n; i++)
+        {
+            int index_ith = latest_word[i] - 'a';
+            if (index_ith == -58)
+                index_ith = 26;
+            //the next line only doesn't produce an error because the dictionary will only have lowercase alphabetic letters or apostrophes, otherwise I would put in another condition to check index_ith is in [0,26]
+            //if there is no child yet, create it and traverse there; if there is already a child there then traverse there.
+            if (trav->children[index_ith] == NULL)
+            {
+                //create new node and traverse to there. Might be an issue with repeatedly redefining next. if set next up outside of loop, I can drop the node* here
+                next = calloc(sizeof(node),1);
+                if (next == NULL)
+                    return false;
+                    
+                //set pointer to child    
+                trav->children[index_ith] = next;
+                // move traversal pointer to child
+                trav = next;
+            }
+            //move traversal pointer to child
+            else
+                trav = trav->children[index_ith];
+            
+            if (i == n-1)
+                trav->is_word = true;
+        }
+    }
+    fclose(dictionary_ptr);
+
+    return true;
+}
+
+/**
+ * Returns number of words in dictionary if loaded else 0 if not yet loaded.
+ */
+unsigned int size(void)
+{
+    return count_words;
+}
+
+/**
+ * Unloads dictionary from memory.  Returns true if successful else false.
+ */
+// passin pointer to node, unloads
+void unload_node(node* node)
+{
+    for (int i = 0; i<27; i++)
+    {
+        if (node->children[i] != NULL)
+            unload_node(node->children[i]);
+    }
+    free(node);
+}
+
+bool unload(void)
+{
+    node* trav = root;
+    
+    if (trav == NULL)
+        return false;
+    else
+        unload_node(trav);
+        return true;
+}
