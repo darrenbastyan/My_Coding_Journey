@@ -1,0 +1,71 @@
+Comfortable territory for me! I have a strange interest in sorting algorithms. I think I love the fact that the problem is very simple and yet there are many different ways that you can get to the answer, some more elegant than others. As a mathematician, I love the problem solving element of getting these to work in code, when they are so easy to explain to another human being. In playing with these, below is an implementation of a bubble sort algorithm. Bubble sort is my second favourite sorting algorithm to merge sort.
+
+I have also implemented binary search to be applied to an ordered list. A great little algorithm for appreciating the power of more efficient algorithms! I have used a while loop here, but a recursive algorithm could also have been nice. 
+________________________________________________________________________________
+/**
+ * helpers.c
+
+ * Helper functions for another program
+ */
+       
+#include <**library**.h>
+
+#include "helpers.h"
+
+/**
+ * Returns true if value is in array of n values, else false.
+ */
+bool search(int value, int values[], int n)
+{
+// Check that number of items to search in is at least one
+    if (n<1)
+    {
+        return false;
+    }
+    else
+    {
+// Binary search:
+        int min = 0;
+        int max = n-1;
+        while (min < max)
+        {
+            int midpoint = ((min+max)/2);
+            if (value == values[midpoint])
+                return true;
+            
+            else if (value < values[midpoint])
+                max = midpoint - 1;
+            
+            else
+                min = midpoint + 1;
+        }        
+        return false;
+    }
+}
+
+/**
+ * Sorts array of n values.
+ */
+void sort(int values[], int n)
+{
+    // Bubble sort algorith:
+    // Set up swapcount to know if no pases are needed after the k_th pass
+    int swapcount = -1;
+    for (int i=0; i<n-1; i++)
+    {
+        for (int k=0; k<n-i-1; k++)
+        {
+            swapcount = 0;
+            int k_th = values[k];
+            if (k_th>values[k+1])
+            {
+                values[k] = values[k+1];
+                values[k+1] = k_th;
+                swapcount++;    
+            }
+        }
+        if (swapcount == 0)
+            return;
+    }
+    return;
+}
