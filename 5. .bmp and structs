@@ -1,0 +1,217 @@
+This problems was the first chance to manipulate picture files. This required using functions like fread and fwrite, as well as working with pointers. It was also my first instance of using user-defined structs which presented a clearly powerful tool! The first set of code is a header file for the structs needed to work with .bmp files. The code beneath this creates an enlarged copy of a bmp file. This required some fun nested loops. 
+_______________________________________________________________________
+/**
+ * bmp.h
+ *
+ *
+ * BMP-related data types based on Microsoft's own.
+ */
+
+#include <stdint.h>
+
+/**
+ * Common Data Types 
+ *
+ * The data types in this section are essentially aliases for C/C++ 
+ * primitive data types.
+ *
+ * Adapted from http://msdn.microsoft.com/en-us/library/cc230309.aspx.
+ * See http://en.wikipedia.org/wiki/Stdint.h for more on stdint.h.
+ */
+typedef uint8_t  BYTE;
+typedef uint32_t DWORD;
+typedef int32_t  LONG;
+typedef uint16_t WORD;
+
+/**
+ * BITMAPFILEHEADER
+ *
+ * The BITMAPFILEHEADER structure contains information about the type, size,
+ * and layout of a file that contains a DIB [device-independent bitmap].
+ *
+ * Adapted from http://msdn.microsoft.com/en-us/library/dd183374(VS.85).aspx.
+ */
+typedef struct 
+{ 
+    WORD   bfType; 
+    DWORD  bfSize; 
+    WORD   bfReserved1; 
+    WORD   bfReserved2; 
+    DWORD  bfOffBits; 
+} __attribute__((__packed__)) 
+BITMAPFILEHEADER; 
+
+/**
+ * BITMAPINFOHEADER
+ *
+ * The BITMAPINFOHEADER structure contains information about the 
+ * dimensions and color format of a DIB [device-independent bitmap].
+ *
+ * Adapted from http://msdn.microsoft.com/en-us/library/dd183376(VS.85).aspx.
+ */
+typedef struct
+{
+    DWORD  biSize; 
+    LONG   biWidth; 
+    LONG   biHeight; 
+    WORD   biPlanes; 
+    WORD   biBitCount; 
+    DWORD  biCompression; 
+    DWORD  biSizeImage; 
+    LONG   biXPelsPerMeter; 
+    LONG   biYPelsPerMeter; 
+    DWORD  biClrUsed; 
+    DWORD  biClrImportant; 
+} __attribute__((__packed__))
+BITMAPINFOHEADER; 
+
+/**
+ * RGBTRIPLE
+ *
+ * This structure describes a color consisting of relative intensities of
+ * red, green, and blue.
+ *
+ * Adapted from http://msdn.microsoft.com/en-us/library/aa922590.aspx.
+ */
+typedef struct
+{
+    BYTE  rgbtBlue;
+    BYTE  rgbtGreen;
+    BYTE  rgbtRed;
+} __attribute__((__packed__))
+RGBTRIPLE;
+_______________________________________________________________________
+/**
+ * resizes 24-bit uncompressed BMPs by a factor of n. 
+ * Your program should accept exactly three command-line arguments, 
+ * per the below usage, whereby the first (n) must be a positive integer less than or equal to 100, the second the name 
+ * of the file to be resized, and the third the name of the resized version to be written.
+ */
+       
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "bmp.h"
+
+int main(int argc, char* argv[])
+{
+    // ensure proper usage
+    if (argc != 4)
+    {
+        printf("Usage: ./resize n infile outfile\n");
+        return 1;
+    }
+    int n = atoi(argv[1]);
+    //checks that scale factor meets criteria
+    if  (n<1 || n > 100)
+    {
+        printf("Scale factor must be a positive integer less than or equal to 100\n");
+        return 1;
+    }
+    // remember filenames
+    char* infile = argv[2];
+    char* outfile = argv[3];
+
+    // open input file 
+    FILE* inptr = fopen(infile, "r");
+    if (inptr == NULL)
+    {
+        printf("Could not open %s.\n", infile);
+        return 2;
+    }
+
+    // open output file
+    FILE* outptr = fopen(outfile, "w");
+    if (outptr == NULL)
+    {
+        fclose(inptr);
+        fprintf(stderr, "Could not create %s.\n", outfile);
+        return 3;
+    }
+
+    // read infile's BITMAPFILEHEADER
+    BITMAPFILEHEADER bf;
+    fread(&bf, sizeof(BITMAPFILEHEADER), 1, inptr);
+
+    // read infile's BITMAPINFOHEADER
+    BITMAPINFOHEADER bi;
+    fread(&bi, sizeof(BITMAPINFOHEADER), 1, inptr);
+
+    BITMAPFILEHEADER bf_out = bf;
+    BITMAPINFOHEADER bi_out = bi;
+    
+    // ensure infile is a 24-bit uncompressed BMP 4.0
+    if (bf.bfType != 0x4d42 || bf.bfOffBits != 54 || bi.biSize != 40 || 
+        bi.biBitCount != 24 || bi.biCompression != 0)
+    {
+        fclose(outptr);
+        fclose(inptr);
+        fprintf(stderr, "Unsupported file format.\n");
+        return 4;
+    }
+
+    //changing the header files following the scaling
+
+    bi_out.biWidth *=n;
+    bi_out.biHeight *=n;
+    
+    // determine padding for scanlines
+    int padding_in =  (4 - (bi.biWidth * sizeof(RGBTRIPLE)) % 4) % 4;
+
+    // determine padding for output file
+    int padding_out =  (4 - (bi_out.biWidth * sizeof(RGBTRIPLE)) % 4) % 4;
+    
+    //changing the header file biSizeImage following scaling
+    bi_out.biSizeImage = (bi_out.biWidth+padding_out)*sizeof(RGBTRIPLE)*abs(bi_out.biHeight);
+
+    //changing the header file bfSize following scaling
+    bf_out.bfSize = bi_out.biSizeImage + sizeof(BITMAPFILEHEADER) +sizeof(BITMAPINFOHEADER);
+    
+    // write outfile's BITMAPFILEHEADER
+    fwrite(&bf_out, sizeof(BITMAPFILEHEADER), 1, outptr);
+
+    // write outfile's BITMAPINFOHEADER
+    fwrite(&bi_out, sizeof(BITMAPINFOHEADER), 1, outptr);
+
+    // iterate over infile's scanLINES (repeating n times covered in the inner loop i_n)    
+    for (int i = 0, biHeight = abs(bi.biHeight); i < biHeight; i++)
+    {
+        for (int i_n = 0; i_n < n; i_n++)
+        {
+            // iterate over pixels in scanline (of input)
+            for (int j = 0; j < bi.biWidth; j++)
+                {
+                    // temporary storage
+                    RGBTRIPLE triple;
+    
+                    // read RGB triple from infile
+                    fread(&triple, sizeof(RGBTRIPLE), 1, inptr);
+    
+                    // write RGB triple to outfile (n times)
+                    for (int j_n = 0; j_n < n; j_n++)
+                    {
+                        fwrite(&triple, sizeof(RGBTRIPLE), 1, outptr);    
+                    }
+                }
+                // then add in appropriate padding
+                for (int k = 0; k < padding_out; k++)
+                {
+                    fputc(0x00, outptr);
+                }
+            //seek back to start of infile scanline for iteration over repeating rows (except the final row)
+            if (i_n < n-1)
+                fseek(inptr, -bi.biWidth*sizeof(RGBTRIPLE), SEEK_CUR);
+        }    
+        // skip over padding, if any.
+        fseek(inptr, padding_in, SEEK_CUR);
+    }
+    // close infile
+    fclose(inptr);
+
+    // close outfile
+    fclose(outptr);
+
+    // end
+    return 0;
+}
+
