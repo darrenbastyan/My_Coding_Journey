@@ -1,0 +1,80 @@
+This program really excited me. It is a fairly simple program that recovers jpg files off of a disk, where the files have been accidently “deleted,” but the disk not formatted. I particularly enjoyed the logic of lines 43 to 74. This was fun to program and I enjoyed working out how to succinctly run through the various conditions without having several if conditions. I really liked the elegance of the result and couldn’t remove the smile on my face when I told my wife, who tried to humour me. The feeling of satisfaction when running the code on a “raw” file and it pops out perfect jpg files was amazing. Feelings like that affirm for sure that this is what I want to do!
+__________________________________________________________________
+
+/**
+ * recover.c
+ *
+ *
+ * Recovers JPEGs from a forensic image.
+ */
+
+#include <stdio.h>
+#include <**library**.h>
+
+
+int main(int argc, char* argv[])
+{
+        // instructions were to hardwire it for input of card.raw. replace "card.raw" with argv[1] to use commandline argument
+    char* infile = "card.raw";
+
+    // open input file 
+    FILE* inptr = fopen(infile, "r");
+    
+    //check that it opened
+    if (inptr == NULL)
+    {
+        printf("Could not open %s.\n", infile);
+        return 2;
+    }
+    
+    // define a buffer (temporary storage of 512 bytes)
+    unsigned char buffer[512];
+    
+    //counter to know which file I am up to    
+    int filecounter = 0;
+    
+    //char array to store name of current image file
+    char title[8];
+    
+    //pointer to current jpg
+    FILE* img = NULL;
+    
+    //loop over all blocks of 512 bytes
+    while (fread(&buffer, 512, 1, inptr) != 0)
+    {
+        //if this block is the start of a new jpg - close existing image and start new image
+        if (buffer[0] == 0xff && buffer[1] == 0xd8 && buffer[2] == 0xff & buffer[3] >= 0xe0 && buffer[3] <=0xef)
+        {
+            //close existing jpeg
+            if (img !=NULL)
+            {
+                fclose(img);
+            }
+            //create a new jpeg
+            sprintf(title,"%03d.jpg", filecounter);
+            filecounter ++;
+            
+            // open new jpg
+            img = fopen(title, "a");
+            
+            // if it didn't work - end
+            if (img == NULL)
+            {
+                fclose(inptr);
+                printf("Could not create %s.\n", title);
+                return 3;
+            }
+        }
+        // if a file is open write to it
+        if (img != NULL)
+            fwrite(&buffer, 512, 1, img);
+    }
+        
+    // close infile
+    fclose(inptr);
+    
+    // close current image file
+    fclose(img);
+
+    return 0;
+}
